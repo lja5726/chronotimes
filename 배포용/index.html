@@ -1,0 +1,1324 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>수면 기록부</title>
+<script type="application/json" id="sleep-data">
+{"version":1,"updatedAt":0,"fileSavedAt":0,"settings":{"targetBed":"23:30","targetWake":"07:30"},"records":[
+]}
+</script>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f3f2ee;
+  --surface: #fcfcfb;
+  --surface-2: #f3f2ee;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #7a7873;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: rgba(11,11,11,.10);
+  --ontime: #2a78d6;
+  --late: #eb6834;
+  --accent: #256abf;
+  --accent-soft: #e6effb;
+  --accent-line: #86b6ef;
+  --good: #0ca30c;
+  --warning: #fab219;
+  --serious: #ec835a;
+  --critical: #d03b3b;
+  --wash: rgba(11,11,11,.05);
+  --band: rgba(12,163,12,.07);
+  --notice: #fff6dc;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --surface-2: #242422;
+    --ink: #ffffff;
+    --ink-2: #c3c2b7;
+    --muted: #9a9890;
+    --grid: #2c2c2a;
+    --axis: #45453f;
+    --border: rgba(255,255,255,.10);
+    --ontime: #3987e5;
+    --late: #d95926;
+    --accent: #2a78d6;
+    --accent-soft: #1c2b40;
+    --accent-line: #256abf;
+    --wash: rgba(255,255,255,.06);
+    --band: rgba(12,163,12,.10);
+    --notice: #3a3020;
+  }
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font-family: "Pretendard", system-ui, -apple-system, "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+button, input, textarea, select { font: inherit; color: inherit; }
+h1, h2, h3 { margin: 0; line-height: 1.3; }
+h1 { font-size: 22px; font-weight: 700; }
+h2 { font-size: 17px; font-weight: 700; }
+h3 { font-size: 15px; font-weight: 700; }
+.wrap { max-width: 1240px; margin: 0 auto; padding: 20px 16px 48px; }
+
+/* header */
+.top { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: flex-end; justify-content: space-between; margin-bottom: 16px; }
+.top .sub { margin: 4px 0 0; color: var(--ink-2); font-size: 14px; }
+.save-state { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); flex-wrap: wrap; }
+.save-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--good); flex: none; }
+.save-dot.warn { background: var(--warning); }
+
+.banner { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; background: var(--notice); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; font-size: 14px; }
+
+/* layout */
+.layout { display: grid; grid-template-columns: 1fr; gap: 16px; align-items: start; }
+@media (min-width: 960px) {
+  .layout { grid-template-columns: 360px minmax(0, 1fr); }
+  .side { position: sticky; top: 16px; }
+}
+.side { display: grid; gap: 16px; }
+.main { display: grid; gap: 16px; min-width: 0; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; min-width: 0; }
+.card > h3 + .sub, .card > h2 + .sub { margin: 4px 0 0; }
+.sub { color: var(--ink-2); font-size: 13px; }
+.muted { color: var(--muted); }
+
+/* buttons */
+.btn { appearance: none; border: 1px solid var(--border); background: var(--surface); border-radius: 9px; padding: 8px 14px; cursor: pointer; font-size: 14px; font-weight: 600; line-height: 1.2; }
+.btn:hover { background: var(--wash); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.small { padding: 5px 10px; font-size: 13px; }
+.btn.link { border: 0; background: none; padding: 2px 4px; color: var(--accent); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+@media (prefers-color-scheme: dark) { .btn.link { color: #86b6ef; } }
+.btn.danger:hover { color: var(--critical); }
+.btn:focus-visible, input:focus-visible, textarea:focus-visible, .chip:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn:disabled { opacity: .4; cursor: default; }
+
+/* form */
+form { display: grid; gap: 16px; margin-top: 14px; }
+.field { display: grid; gap: 6px; min-width: 0; border: 0; margin: 0; padding: 0; }
+.field > label, .field > legend { font-weight: 600; font-size: 14px; padding: 0; }
+.help { margin: 0; color: var(--ink-2); font-size: 12.5px; }
+input[type=date], input[type=time], input[type=text], textarea {
+  width: 100%; min-width: 0; padding: 9px 11px; border-radius: 9px; border: 1px solid var(--axis); background: var(--surface); font-size: 15px;
+}
+textarea { resize: vertical; min-height: 44px; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.when { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--axis); border-radius: 10px; padding: 3px; gap: 3px; }
+.when label { display: block; text-align: center; padding: 7px 6px; border-radius: 7px; cursor: pointer; font-size: 13.5px; color: var(--ink-2); }
+.when input { position: absolute; opacity: 0; pointer-events: none; }
+.when label:has(input:checked) { background: var(--accent-soft); color: var(--ink); font-weight: 700; box-shadow: inset 0 0 0 1px var(--accent-line); }
+.when label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 1px; }
+.preview { background: var(--surface-2); border-radius: 10px; padding: 10px 12px; font-size: 13.5px; display: grid; gap: 3px; }
+.preview .warn { color: var(--ink); }
+.preview .warn::before { content: "⚠ "; color: var(--serious); }
+.tag { display: inline-block; font-size: 11.5px; font-weight: 600; padding: 1px 7px; border-radius: 99px; background: var(--wash); color: var(--ink-2); margin-left: 6px; vertical-align: 1px; }
+.notice { margin: 0; font-size: 12.5px; background: var(--notice); border-radius: 8px; padding: 6px 10px; }
+.late-hint { font-weight: 400; font-size: 12.5px; color: var(--ink-2); margin-left: 4px; }
+.late-hint.on { color: var(--ink); }
+.late-hint.on::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--late); margin-right: 5px; vertical-align: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { appearance: none; border: 1px solid var(--axis); background: var(--surface); border-radius: 99px; padding: 5px 11px; font-size: 13px; cursor: pointer; }
+.chip[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent-line); font-weight: 700; }
+.chip[aria-pressed=true]::before { content: "✓ "; }
+.add-reason { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.form-msg { margin: 0; font-size: 13px; color: var(--ink-2); min-height: 1em; }
+
+/* settings */
+details.settings summary { cursor: pointer; font-weight: 700; font-size: 14px; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+details.settings summary::-webkit-details-marker { display: none; }
+details.settings summary::after { content: "펼치기"; font-weight: 500; font-size: 12.5px; color: var(--ink-2); }
+details.settings[open] summary::after { content: "접기"; }
+.settings-body { display: grid; gap: 14px; margin-top: 14px; }
+.btn-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* analysis toolbar */
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+.tabs { display: inline-grid; grid-auto-flow: column; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 3px; gap: 2px; }
+.tabs button { appearance: none; border: 0; background: none; padding: 7px 16px; border-radius: 7px; cursor: pointer; font-weight: 600; font-size: 14px; color: var(--ink-2); }
+.tabs button[aria-pressed=true] { background: var(--ink); color: var(--surface); }
+.range-nav { display: flex; align-items: center; gap: 6px; font-size: 14px; }
+.range-nav .label { font-weight: 600; min-width: 0; text-align: center; padding: 0 4px; }
+.icon-btn { appearance: none; border: 1px solid var(--border); background: var(--surface); width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 16px; line-height: 1; display: grid; place-items: center; }
+.icon-btn:hover:not(:disabled) { background: var(--wash); }
+.icon-btn:disabled { opacity: .35; cursor: default; }
+
+/* stat tiles */
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 720px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.tile { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; min-width: 0; }
+.tile .k { font-size: 13px; color: var(--ink-2); }
+.tile .v { font-size: 26px; font-weight: 700; margin-top: 2px; letter-spacing: -.01em; white-space: nowrap; }
+.tile .v small { font-size: 15px; font-weight: 600; color: var(--ink-2); margin-left: 2px; }
+.tile .d { font-size: 12.5px; color: var(--ink-2); margin-top: 2px; }
+
+.grid2 { display: grid; grid-template-columns: 1fr; gap: 16px; }
+@media (min-width: 720px) { .grid2 { grid-template-columns: 1fr 1fr; } }
+
+/* regularity */
+.verdict { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+.verdict .big { font-size: 20px; font-weight: 700; }
+.status-ico { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 14px; font-weight: 800; flex: none; }
+.status-ico.good { background: var(--good); color: #fff; }
+.status-ico.warning { background: var(--warning); color: #0b0b0b; }
+.status-ico.serious { background: var(--serious); color: #0b0b0b; }
+.status-ico.critical { background: var(--critical); color: #fff; }
+.status-ico.none { background: var(--wash); color: var(--ink-2); }
+.meter { margin: 16px 0 4px; position: relative; padding-top: 22px; }
+.meter-track { display: flex; gap: 2px; height: 8px; }
+.meter-track span { flex: 1; opacity: .28; }
+.meter-track span:first-child { border-radius: 4px 0 0 4px; }
+.meter-track span:last-child { border-radius: 0 4px 4px 0; }
+.meter-track span.on { opacity: 1; }
+.meter-track .good { background: var(--good); }
+.meter-track .warning { background: var(--warning); }
+.meter-track .serious { background: var(--serious); }
+.meter-track .critical { background: var(--critical); }
+.meter-mark { position: absolute; top: 0; transform: translateX(-50%); font-size: 12px; font-weight: 700; white-space: nowrap; }
+.meter-mark::after { content: ""; position: absolute; left: 50%; top: 18px; width: 2px; height: 16px; margin-left: -1px; background: var(--ink); border-radius: 1px; box-shadow: 0 0 0 2px var(--surface); }
+.meter-scale { position: relative; height: 16px; font-size: 11.5px; color: var(--muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
+.meter-scale span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.meter-scale span:first-child { transform: none; }
+.meter-scale span:last-child { transform: translateX(-100%); }
+dl.facts { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 14px 0 0; font-size: 13.5px; }
+dl.facts dt { color: var(--ink-2); }
+dl.facts dd { margin: 0; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.note { font-size: 12.5px; color: var(--ink-2); margin: 12px 0 0; }
+
+/* trend */
+.trend-list { display: grid; gap: 12px; margin-top: 12px; }
+.trend-row { display: grid; grid-template-columns: 30px 1fr; gap: 10px; align-items: start; }
+.trend-ico { width: 30px; height: 30px; border-radius: 8px; background: var(--wash); display: grid; place-items: center; font-size: 16px; font-weight: 700; color: var(--ink-2); }
+.trend-row .t { font-weight: 700; font-size: 14px; }
+.trend-row .s { font-size: 12.5px; color: var(--ink-2); }
+
+/* charts */
+.chart-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; align-items: flex-start; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { display: inline-block; width: 10px; height: 14px; border-radius: 3px; }
+.legend i.ontime { background: var(--ontime); }
+.legend i.late { background: var(--late); }
+.legend i.line { width: 16px; height: 2px; border-radius: 1px; background: var(--ink-2); }
+.legend i.band { width: 14px; height: 10px; background: var(--band); box-shadow: inset 0 0 0 1px rgba(12,163,12,.35); border-radius: 2px; }
+.chart { position: relative; margin-top: 12px; min-height: 120px; }
+.chart svg { display: block; overflow: visible; }
+.chart .ax { font-size: 11.5px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+.chart .ax.wk { fill: var(--ink-2); font-weight: 700; }
+.chart .grid { stroke: var(--grid); stroke-width: 1; shape-rendering: crispEdges; }
+.chart .grid.mid { stroke: var(--axis); }
+.chart .target { stroke: var(--ink-2); stroke-width: 1; opacity: .55; shape-rendering: crispEdges; }
+.chart .target-lab, .chart .avg-lab, .chart .band-lab { font-size: 11px; fill: var(--ink-2); paint-order: stroke; stroke: var(--surface); stroke-width: 3px; stroke-linejoin: round; }
+.chart .bar.ontime, .chart .dot.ontime { fill: var(--ontime); }
+.chart .bar.late, .chart .dot.late { fill: var(--late); }
+.chart .dot { stroke: var(--surface); stroke-width: 2; }
+.chart .open-dot { fill: var(--surface); stroke-width: 2.5; }
+.chart .open-dot.ontime { stroke: var(--ontime); }
+.chart .open-dot.late { stroke: var(--late); }
+.chart .hit { fill: transparent; cursor: default; }
+.chart .hover-wash { fill: var(--wash); }
+.chart .band { fill: var(--band); }
+.chart .avg { stroke: var(--ink-2); stroke-width: 1; shape-rendering: crispEdges; }
+.chart .line { fill: none; stroke: var(--ontime); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart .ldot { fill: var(--ontime); stroke: var(--surface); stroke-width: 2; }
+.chart .xhair { stroke: var(--ink-2); stroke-width: 1; shape-rendering: crispEdges; }
+.chart-empty { display: grid; place-items: center; min-height: 160px; color: var(--ink-2); font-size: 14px; background: var(--surface-2); border-radius: 10px; }
+.tip { position: absolute; top: 0; left: 0; pointer-events: none; background: var(--surface); border: 1px solid var(--border); box-shadow: 0 6px 20px rgba(0,0,0,.14); border-radius: 10px; padding: 9px 11px; font-size: 12.5px; min-width: 150px; max-width: 240px; z-index: 5; opacity: 0; transition: opacity .08s; }
+.tip.show { opacity: 1; }
+.tip .tt { color: var(--ink-2); font-size: 12px; margin-bottom: 3px; }
+.tip .tv { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 7px; }
+.tip .tv i { width: 12px; height: 3px; border-radius: 2px; display: inline-block; flex: none; }
+.tip .tv i.ontime { background: var(--ontime); }
+.tip .tv i.late { background: var(--late); }
+.tip .ts { color: var(--ink-2); margin-top: 2px; }
+
+/* reasons */
+.reasons { display: grid; gap: 8px; margin-top: 12px; }
+.rrow { display: grid; grid-template-columns: minmax(70px, 120px) 1fr 40px; gap: 10px; align-items: center; font-size: 13.5px; }
+.rlab { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rtrack { height: 12px; }
+.rbar { height: 12px; background: var(--late); border-radius: 0 4px 4px 0; min-width: 4px; }
+.rval { text-align: right; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+
+/* table */
+.table-wrap { overflow-x: auto; margin-top: 10px; position: relative; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 620px; }
+th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+th { font-size: 12.5px; color: var(--ink-2); font-weight: 600; white-space: nowrap; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.date { white-space: nowrap; font-weight: 600; }
+td .memo { color: var(--ink-2); font-size: 12.5px; margin-top: 2px; }
+td.act { white-space: nowrap; text-align: right; }
+.late-mark { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--late); margin-left: 6px; vertical-align: 1px; }
+tr.missing td { color: var(--muted); }
+
+.empty { text-align: center; padding: 40px 20px; }
+.empty p { color: var(--ink-2); margin: 8px 0 18px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>수면 기록부</h1>
+      <p class="sub">언제 잠들고 언제 일어났는지, 왜 늦어졌는지 적고 수면 패턴을 확인해요.</p>
+    </div>
+    <div class="save-state" id="saveState" role="status"></div>
+  </header>
+
+  <div class="banner" id="demoBanner" hidden>
+    <span>예시 데이터로 미리보는 중이에요. 화면에 보이는 예시 기록은 저장되지 않아요.</span>
+    <button type="button" class="btn small" id="demoExit">미리보기 끝내기</button>
+  </div>
+
+  <div class="layout">
+    <div class="side">
+      <section class="card" aria-labelledby="formTitle">
+        <h2 id="formTitle">수면 기록하기</h2>
+        <form id="entryForm" novalidate>
+          <div class="field">
+            <label for="fDate">어느 날 밤인가요?</label>
+            <input type="date" id="fDate" required>
+            <p class="help">잠자리에 든 날 저녁의 날짜예요. 자정을 넘겨 잤어도 전날 날짜로 적어요.</p>
+            <p class="notice" id="existsNote" hidden>이미 기록한 밤이에요. 저장하면 내용이 바뀌어요.</p>
+          </div>
+
+          <div class="row2">
+            <div class="field">
+              <label for="fBed">잠든 시각</label>
+              <input type="time" id="fBed" required>
+            </div>
+            <div class="field">
+              <label for="fWake">일어난 시각</label>
+              <input type="time" id="fWake">
+            </div>
+          </div>
+
+          <div class="field">
+            <span class="sr" id="whenLabel">잠든 때</span>
+            <div class="when" role="radiogroup" aria-labelledby="whenLabel">
+              <label><input type="radio" name="when" value="0" checked>자정 전 (그날 밤)</label>
+              <label><input type="radio" name="when" value="1">자정 이후 (다음날 새벽)</label>
+            </div>
+            <p class="help">잠든 시각을 넣으면 자동으로 골라져요. 정오 전 시각은 ‘자정 이후’로 봐요.</p>
+          </div>
+
+          <div class="preview" id="preview" aria-live="polite"></div>
+
+          <fieldset class="field">
+            <legend>늦어진 이유<span class="late-hint" id="lateHint"></span></legend>
+            <div class="chips" id="chips"></div>
+            <div class="add-reason">
+              <input type="text" id="fReasonNew" maxlength="20" placeholder="다른 이유 직접 추가" aria-label="다른 이유 직접 추가">
+              <button type="button" class="btn" id="addReason">추가</button>
+            </div>
+            <textarea id="fMemo" rows="2" maxlength="300" placeholder="메모 (선택)" aria-label="메모"></textarea>
+          </fieldset>
+
+          <div class="actions">
+            <button type="submit" class="btn primary" id="saveBtn">기록 저장</button>
+            <button type="button" class="btn" id="resetBtn">새로 쓰기</button>
+          </div>
+          <p class="form-msg" id="formMsg" role="status"></p>
+        </form>
+      </section>
+
+      <details class="card settings" id="settings">
+        <summary>목표 시각 · 데이터 관리</summary>
+        <div class="settings-body">
+          <div class="row2">
+            <div class="field">
+              <label for="sBed">목표 취침</label>
+              <input type="time" id="sBed">
+            </div>
+            <div class="field">
+              <label for="sWake">목표 기상</label>
+              <input type="time" id="sWake">
+            </div>
+          </div>
+          <p class="help">목표 취침보다 늦게 잔 날은 차트에서 주황색으로 표시돼요.</p>
+          <div class="field">
+            <span style="font-weight:600;font-size:14px">데이터</span>
+            <div class="btn-grid">
+              <button type="button" class="btn small" id="fileSave">이 파일에 저장</button>
+              <button type="button" class="btn small" id="jsonExport">JSON 백업</button>
+              <button type="button" class="btn small" id="jsonImport">JSON 불러오기</button>
+              <button type="button" class="btn small" id="csvExport">CSV 내보내기</button>
+            </div>
+            <input type="file" id="importFile" accept=".json,application/json" hidden>
+            <p class="help">기록은 이 브라우저에 자동 저장돼요. ‘이 파일에 저장’을 누르고 지금 열린 HTML 파일을 골라 덮어쓰면 기록이 파일 안에 담겨서, 다른 컴퓨터나 브라우저에서 열어도 그대로 보여요. 한 번 연결하면 창을 닫기 전까지 고칠 때마다 파일에도 자동 저장돼요. (Chrome·Edge)</p>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <main class="main">
+      <div class="toolbar" id="toolbar">
+        <div class="tabs" id="periodTabs" aria-label="기간">
+          <button type="button" data-n="7">1주일</button>
+          <button type="button" data-n="15">보름</button>
+          <button type="button" data-n="30">한 달</button>
+        </div>
+        <div class="range-nav">
+          <button type="button" class="icon-btn" id="prevRange" aria-label="이전 기간">‹</button>
+          <span class="label" id="rangeLabel"></span>
+          <button type="button" class="icon-btn" id="nextRange" aria-label="다음 기간">›</button>
+          <button type="button" class="btn small" id="latestRange">최근</button>
+        </div>
+      </div>
+
+      <section class="card empty" id="emptyState" hidden>
+        <h2>아직 기록이 없어요</h2>
+        <p>왼쪽에서 어젯밤 수면을 기록해 보세요.<br>며칠 쌓이면 수면 패턴과 규칙성을 여기서 보여드려요.</p>
+        <button type="button" class="btn" id="demoBtn">예시 데이터로 미리보기</button>
+      </section>
+
+      <div class="main" id="analysis">
+        <div class="tiles" id="tiles"></div>
+
+        <div class="grid2">
+          <section class="card" aria-labelledby="regTitle">
+            <h3 id="regTitle">수면 규칙성</h3>
+            <div id="regBody"></div>
+          </section>
+          <section class="card" aria-labelledby="trendTitle">
+            <h3 id="trendTitle">수면 추이</h3>
+            <div id="trendBody"></div>
+          </section>
+        </div>
+
+        <section class="card" aria-labelledby="c1Title">
+          <div class="chart-head">
+            <div>
+              <h3 id="c1Title">밤마다 잠든 시간대</h3>
+              <p class="sub">막대 위쪽 끝이 잠든 시각, 아래쪽 끝이 일어난 시각이에요. 막대 높이가 고를수록 패턴이 규칙적이에요.</p>
+            </div>
+            <div class="legend">
+              <span><i class="ontime"></i>목표 시각 안에 잠</span>
+              <span><i class="late"></i>목표보다 늦게 잠</span>
+              <span><i class="line"></i>목표 시각</span>
+            </div>
+          </div>
+          <div class="chart" id="chart1"></div>
+        </section>
+
+        <section class="card" aria-labelledby="c2Title">
+          <div class="chart-head">
+            <div>
+              <h3 id="c2Title">수면 시간</h3>
+              <p class="sub">하루하루 몇 시간 잤는지예요. 기록이 빠진 날은 선이 끊겨요.</p>
+            </div>
+            <div class="legend">
+              <span><i class="band"></i>권장 7–9시간</span>
+              <span><i class="line"></i>기간 평균</span>
+            </div>
+          </div>
+          <div class="chart" id="chart2"></div>
+        </section>
+
+        <section class="card" aria-labelledby="rTitle">
+          <h3 id="rTitle">늦어진 이유</h3>
+          <p class="sub" id="reasonSummary"></p>
+          <div class="reasons" id="reasons"></div>
+        </section>
+
+        <section class="card" aria-labelledby="tTitle">
+          <h3 id="tTitle">기록 목록</h3>
+          <div class="table-wrap"><table id="table"></table></div>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+// 렌더링 전에 원본 HTML을 잡아 둔다 (파일 저장 시 데이터 블록만 바꿔 끼움)
+const PRISTINE = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+const LS_KEY = 'sleep-log:' + decodeURIComponent(location.pathname);
+const UI_KEY = 'sleep-log-ui';
+const DEFAULT_REASONS = ['과제·공부', '일·알바', '스마트폰', '영상·게임', '잠이 안 옴', '약속·모임', '카페인', '늦은 낮잠', '늦은 귀가'];
+const PERIOD_NAME = { 7: '1주일', 15: '보름', 30: '한 달' };
+const WD = '일월화수목금토';
+const DAY = 1440;
+
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2, '0');
+
+/* ---------- 날짜·시간 도우미 ---------- */
+function dateKey(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+function keyToDate(k) { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); }
+function addDays(k, n) { const d = keyToDate(k); d.setDate(d.getDate() + n); return dateKey(d); }
+function md(k) { const d = keyToDate(k); return `${d.getMonth() + 1}월 ${d.getDate()}일`; }
+function mdw(k) { const d = keyToDate(k); return `${md(k)} (${WD[d.getDay()]})`; }
+function parseHM(s) {
+  if (!s || !/^\d{1,2}:\d{2}/.test(s)) return null;
+  const [h, m] = s.split(':').map(Number);
+  return h * 60 + m;
+}
+function clock(off) {
+  const t = ((Math.round(off) % DAY) + DAY) % DAY;
+  return pad(Math.floor(t / 60)) + ':' + pad(t % 60);
+}
+function dur(min) {
+  min = Math.round(Math.abs(min));
+  const h = Math.floor(min / 60), m = min % 60;
+  if (!h) return `${m}분`;
+  return m ? `${h}시간 ${m}분` : `${h}시간`;
+}
+function nightDefault() {
+  const now = new Date();
+  if (now.getHours() < 15) now.setDate(now.getDate() - 1);
+  return dateKey(now);
+}
+
+// 모든 시각은 "그 밤이 지나는 자정"을 0으로 둔 분 단위로 바꿔 계산한다.
+// 23:00 → -60, 01:30 → 90. 그래서 자정 전후가 섞여도 평균·편차가 바로 나온다.
+function bedOffset(r) { const t = parseHM(r.bed); return r.nextDay ? t : t - DAY; }
+function wakeOffset(r) {
+  const w = parseHM(r.wake);
+  if (w == null) return null;
+  const b = bedOffset(r);
+  for (const c of [w - DAY, w, w + DAY]) if (c > b) return c;
+  return null;
+}
+function targetBedOff(st) { const t = parseHM(st.targetBed) ?? 23 * 60 + 30; return t < 12 * 60 ? t : t - DAY; }
+function targetWakeOff(st) { return parseHM(st.targetWake) ?? 7 * 60 + 30; }
+
+/* ---------- 통계 ---------- */
+function mean(a) { return a.length ? a.reduce((s, v) => s + v, 0) / a.length : null; }
+function sd(a) {
+  if (a.length < 2) return null;
+  const m = mean(a);
+  return Math.sqrt(a.reduce((s, v) => s + (v - m) ** 2, 0) / (a.length - 1));
+}
+function slope(xs, ys) {
+  const n = xs.length; if (n < 3) return null;
+  const mx = mean(xs), my = mean(ys);
+  let num = 0, den = 0;
+  for (let i = 0; i < n; i++) { num += (xs[i] - mx) * (ys[i] - my); den += (xs[i] - mx) ** 2; }
+  return den ? num / den : null;
+}
+
+/* ---------- 데이터 ---------- */
+const BASE = () => ({ version: 1, updatedAt: 0, fileSavedAt: 0, settings: { targetBed: '23:30', targetWake: '07:30' }, records: [] });
+
+function normalize(d) {
+  const out = BASE();
+  if (!d || typeof d !== 'object') return out;
+  out.updatedAt = +d.updatedAt || 0;
+  out.fileSavedAt = +d.fileSavedAt || 0;
+  if (d.settings) {
+    if (parseHM(d.settings.targetBed) != null) out.settings.targetBed = d.settings.targetBed;
+    if (parseHM(d.settings.targetWake) != null) out.settings.targetWake = d.settings.targetWake;
+  }
+  const seen = new Map();
+  for (const r of Array.isArray(d.records) ? d.records : []) {
+    if (!r || !/^\d{4}-\d{2}-\d{2}$/.test(r.date) || parseHM(r.bed) == null) continue;
+    seen.set(r.date, {
+      date: r.date,
+      bed: r.bed.slice(0, 5),
+      nextDay: !!r.nextDay,
+      wake: parseHM(r.wake) != null ? r.wake.slice(0, 5) : '',
+      reasons: Array.isArray(r.reasons) ? r.reasons.map(String).filter(Boolean) : [],
+      memo: String(r.memo || '')
+    });
+  }
+  out.records = [...seen.values()].sort((a, b) => a.date.localeCompare(b.date));
+  return out;
+}
+
+function loadData() {
+  let emb = null, loc = null;
+  try { emb = JSON.parse($('sleep-data').textContent); } catch (e) {}
+  try { loc = JSON.parse(localStorage.getItem(LS_KEY)); } catch (e) {}
+  let d = emb || BASE();
+  if (loc && (+loc.updatedAt || 0) > (+d.updatedAt || 0)) d = loc;
+  return normalize(d);
+}
+
+let data = loadData();
+let demo = null;
+const view = () => demo || data;
+const findRec = k => data.records.find(r => r.date === k);
+
+function persist(touch = true) {
+  if (touch) data.updatedAt = Date.now();
+  try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch (e) {}
+  if (touch && fileHandle) scheduleFileWrite();
+  renderSaveState();
+}
+function upsert(rec) {
+  const i = data.records.findIndex(r => r.date === rec.date);
+  if (i >= 0) data.records[i] = rec; else data.records.push(rec);
+  data.records.sort((a, b) => a.date.localeCompare(b.date));
+  persist();
+}
+function removeRec(k) {
+  data.records = data.records.filter(r => r.date !== k);
+  persist();
+}
+
+/* ---------- 파일 저장 ---------- */
+let fileHandle = null, writeTimer = null, lastFileWrite = 0, fileError = '';
+
+function serialize(d) {
+  const head = { version: 1, updatedAt: d.updatedAt, fileSavedAt: d.fileSavedAt, settings: d.settings };
+  const s = JSON.stringify(head).slice(0, -1) + ',"records":[\n' + d.records.map(r => JSON.stringify(r)).join(',\n') + '\n]}';
+  return s.replace(/</g, '\\u003c');
+}
+function buildHtml() {
+  const json = serialize(data);
+  return PRISTINE.replace(/(<script type="application\/json" id="sleep-data">)[\s\S]*?(<\/script>)/, (_, a, b) => a + '\n' + json + '\n' + b);
+}
+function fileName() {
+  const n = decodeURIComponent(location.pathname.split('/').pop() || '');
+  return /\.html?$/i.test(n) ? n : '수면기록부.html';
+}
+function download(name, text, type) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type }));
+  a.download = name;
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+async function writeFile() {
+  data.fileSavedAt = Date.now();
+  const w = await fileHandle.createWritable();
+  await w.write(buildHtml());
+  await w.close();
+  lastFileWrite = Date.now();
+  fileError = '';
+  persist(false);
+}
+function scheduleFileWrite() {
+  clearTimeout(writeTimer);
+  writeTimer = setTimeout(async () => {
+    try { await writeFile(); }
+    catch (e) { fileError = '파일 자동 저장에 실패했어요'; fileHandle = null; renderSaveState(); }
+  }, 600);
+}
+async function saveToFile() {
+  if (!window.showSaveFilePicker) {
+    data.fileSavedAt = Date.now();
+    download(fileName(), buildHtml(), 'text/html');
+    persist(false);
+    flash('HTML 파일을 내려받았어요. 지금 파일 대신 이 파일을 쓰면 돼요.');
+    return;
+  }
+  try {
+    if (!fileHandle) {
+      fileHandle = await window.showSaveFilePicker({
+        suggestedName: fileName(),
+        types: [{ description: 'HTML 파일', accept: { 'text/html': ['.html'] } }]
+      });
+    }
+    await writeFile();
+    flash('파일에 저장했어요. 이제 고칠 때마다 파일에도 자동 저장돼요.');
+  } catch (e) {
+    if (e && e.name === 'AbortError') return;
+    fileHandle = null;
+    fileError = '파일 저장에 실패했어요';
+    renderSaveState();
+  }
+}
+function renderSaveState() {
+  const el = $('saveState');
+  el.textContent = '';
+  const t = ts => { const d = new Date(ts); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+  if (fileError) {
+    el.append(h('span', { class: 'save-dot warn' }), fileError + ' ·', h('button', { class: 'btn link', type: 'button', onclick: saveToFile }, '다시 저장'));
+  } else if (fileHandle) {
+    el.append(h('span', { class: 'save-dot' }), `파일과 연결됨 · ${t(lastFileWrite || Date.now())}에 저장`);
+  } else {
+    const unsaved = data.records.length && data.updatedAt > data.fileSavedAt;
+    if (location.protocol !== 'file:') {
+      el.append(h('span', { class: 'save-dot' }), '이 브라우저에 자동 저장됨');
+      if (data.records.length) el.append(' ·', h('button', { class: 'btn link', type: 'button', onclick: saveToFile }, '백업 파일로 저장'));
+      return;
+    }
+    el.append(h('span', { class: 'save-dot' + (unsaved ? ' warn' : '') }), '브라우저에 자동 저장됨');
+    if (unsaved) el.append(' · 파일엔 아직 안 담김', h('button', { class: 'btn link', type: 'button', onclick: saveToFile }, '파일에 저장'));
+  }
+}
+
+/* ---------- DOM 도우미 ---------- */
+function h(tag, props, ...kids) {
+  const e = document.createElement(tag);
+  if (props) for (const [k, v] of Object.entries(props)) {
+    if (v == null || v === false) continue;
+    if (k === 'class') e.className = v;
+    else if (k === 'style') e.style.cssText = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of kids.flat()) {
+    if (c == null || c === false) continue;
+    e.append(c instanceof Node ? c : document.createTextNode(String(c)));
+  }
+  return e;
+}
+const NS = 'http://www.w3.org/2000/svg';
+function s(tag, attrs, text) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (text != null) e.textContent = text;
+  return e;
+}
+function flash(msg) { $('formMsg').textContent = msg; }
+
+/* ---------- 입력 폼 ---------- */
+const fDate = $('fDate'), fBed = $('fBed'), fWake = $('fWake'), fMemo = $('fMemo');
+let selected = new Set();
+let editing = null;
+
+const getWhen = () => document.querySelector('input[name=when]:checked').value === '1';
+const setWhen = v => { document.querySelector(`input[name=when][value="${v ? 1 : 0}"]`).checked = true; };
+
+function allReasons() {
+  const set = new Set(DEFAULT_REASONS);
+  data.records.forEach(r => r.reasons.forEach(x => set.add(x)));
+  selected.forEach(x => set.add(x));
+  return [...set];
+}
+function renderChips() {
+  const box = $('chips');
+  box.textContent = '';
+  for (const r of allReasons()) {
+    box.append(h('button', {
+      type: 'button', class: 'chip', 'aria-pressed': selected.has(r) ? 'true' : 'false',
+      onclick: () => { selected.has(r) ? selected.delete(r) : selected.add(r); renderChips(); }
+    }, r));
+  }
+}
+function clearFields() {
+  fBed.value = ''; fWake.value = ''; fMemo.value = '';
+  setWhen(false);
+  selected = new Set();
+}
+function loadDate(k) {
+  fDate.value = k;
+  const r = findRec(k);
+  if (r) {
+    fBed.value = r.bed; fWake.value = r.wake; fMemo.value = r.memo;
+    setWhen(r.nextDay);
+    selected = new Set(r.reasons);
+    editing = k;
+  } else {
+    if (editing) clearFields();
+    editing = null;
+  }
+  $('existsNote').hidden = !r;
+  $('saveBtn').textContent = r ? '기록 수정' : '기록 저장';
+  renderChips();
+  updatePreview();
+}
+function updatePreview() {
+  const p = $('preview'), hint = $('lateHint');
+  p.textContent = '';
+  const k = fDate.value;
+  if (!k || parseHM(fBed.value) == null) {
+    p.append(h('span', { class: 'muted' }, '잠든 시각을 넣으면 실제 날짜와 잔 시간을 계산해서 보여줘요.'));
+    hint.textContent = ''; hint.className = 'late-hint';
+    return;
+  }
+  const r = { date: k, bed: fBed.value, nextDay: getWhen(), wake: fWake.value };
+  const b = bedOffset(r), w = wakeOffset(r);
+  const bedDay = addDays(k, 1 + Math.floor(b / DAY));
+  p.append(h('div', null, `${mdw(bedDay)} ${fBed.value} 잠듦`, h('span', { class: 'tag' }, r.nextDay ? '자정 이후' : '자정 전')));
+  if (w != null) {
+    const wakeDay = addDays(k, 1 + Math.floor(w / DAY));
+    p.append(h('div', null, `→ ${mdw(wakeDay)} ${fWake.value} 기상 · `, h('b', null, `${dur(w - b)} 잠`)));
+    if (w - b > 16 * 60 || w - b < 60) p.append(h('div', { class: 'warn' }, '잔 시간이 이상해 보여요. 시각과 ‘자정 전/이후’ 선택을 확인해 주세요.'));
+  } else {
+    p.append(h('div', { class: 'muted' }, '일어난 시각은 아침에 채워도 돼요.'));
+  }
+  const tb = targetBedOff(data.settings);
+  if (b > tb) {
+    hint.textContent = `목표(${data.settings.targetBed})보다 ${dur(b - tb)} 늦게 잠`;
+    hint.className = 'late-hint on';
+  } else {
+    hint.textContent = '— 목표 시각 안에 잤다면 비워 둬도 돼요';
+    hint.className = 'late-hint';
+  }
+}
+
+fBed.addEventListener('input', () => {
+  const t = parseHM(fBed.value);
+  if (t != null) setWhen(t < 12 * 60);
+  updatePreview();
+});
+fWake.addEventListener('input', updatePreview);
+document.querySelectorAll('input[name=when]').forEach(el => el.addEventListener('change', updatePreview));
+fDate.addEventListener('change', () => { if (fDate.value) loadDate(fDate.value); });
+
+function addCustomReason() {
+  const v = $('fReasonNew').value.trim();
+  if (!v) return;
+  selected.add(v);
+  $('fReasonNew').value = '';
+  renderChips();
+}
+$('addReason').addEventListener('click', addCustomReason);
+$('fReasonNew').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addCustomReason(); } });
+
+$('entryForm').addEventListener('submit', e => {
+  e.preventDefault();
+  if (!fDate.value) { flash('날짜를 골라 주세요.'); fDate.focus(); return; }
+  if (parseHM(fBed.value) == null) { flash('잠든 시각을 적어 주세요.'); fBed.focus(); return; }
+  if (demo) exitDemo();
+  const rec = {
+    date: fDate.value, bed: fBed.value, nextDay: getWhen(), wake: fWake.value || '',
+    reasons: [...selected], memo: fMemo.value.trim()
+  };
+  const wasEdit = !!findRec(rec.date);
+  upsert(rec);
+  const N = state.period;
+  // 저장한 밤이 지금 보는 기간 밖이면 그 밤이 보이도록 기간을 옮긴다
+  if (rec.date > state.end || rec.date <= addDays(state.end, -N)) {
+    const end = addDays(rec.date, N - 1), max = nightDefault();
+    state.end = end > max ? (rec.date > max ? rec.date : max) : end;
+  }
+  loadDate(rec.date);
+  flash(`${mdw(rec.date)} 밤 기록을 ${wasEdit ? '수정' : '저장'}했어요.`);
+  renderAnalysis();
+});
+$('resetBtn').addEventListener('click', () => {
+  editing = null; clearFields();
+  loadDate(nightDefault());
+  flash('');
+});
+
+/* ---------- 설정 ---------- */
+$('sBed').value = data.settings.targetBed;
+$('sWake').value = data.settings.targetWake;
+['sBed', 'sWake'].forEach(id => $(id).addEventListener('change', () => {
+  if (parseHM($('sBed').value) != null) data.settings.targetBed = $('sBed').value;
+  if (parseHM($('sWake').value) != null) data.settings.targetWake = $('sWake').value;
+  persist();
+  updatePreview();
+  renderAnalysis();
+}));
+$('fileSave').addEventListener('click', saveToFile);
+$('jsonExport').addEventListener('click', () => {
+  download(`수면기록-${dateKey(new Date())}.json`, JSON.stringify(data, null, 1), 'application/json');
+});
+$('jsonImport').addEventListener('click', () => $('importFile').click());
+$('importFile').addEventListener('change', async e => {
+  const f = e.target.files[0];
+  e.target.value = '';
+  if (!f) return;
+  try {
+    const inc = normalize(JSON.parse(await f.text()));
+    if (!inc.records.length) { alert('불러올 기록이 없어요.'); return; }
+    if (!confirm(`기록 ${inc.records.length}개를 불러와요. 같은 날짜의 기록은 불러온 내용으로 바뀌어요.`)) return;
+    const map = new Map(data.records.map(r => [r.date, r]));
+    inc.records.forEach(r => map.set(r.date, r));
+    data.records = [...map.values()].sort((a, b) => a.date.localeCompare(b.date));
+    persist();
+    if (demo) exitDemo();
+    renderChips(); renderAnalysis();
+    flash(`기록 ${inc.records.length}개를 불러왔어요.`);
+  } catch (err) { alert('JSON 파일을 읽지 못했어요.'); }
+});
+$('csvExport').addEventListener('click', () => {
+  const q = v => '"' + String(v).replace(/"/g, '""') + '"';
+  const lines = [['날짜(밤)', '잠든 시각', '자정 이후', '일어난 시각', '잔 시간(분)', '늦어진 이유', '메모'].map(q).join(',')];
+  data.records.forEach(r => {
+    const w = wakeOffset(r);
+    lines.push([r.date, r.bed, r.nextDay ? 'O' : '', r.wake, w == null ? '' : w - bedOffset(r), r.reasons.join(' / '), r.memo].map(q).join(','));
+  });
+  download(`수면기록-${dateKey(new Date())}.csv`, '﻿' + lines.join('\r\n'), 'text/csv');
+});
+
+/* ---------- 예시 데이터 ---------- */
+function makeDemo() {
+  let seed = 11;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const pick = a => a[Math.floor(rnd() * a.length)];
+  const end = nightDefault();
+  const recs = [];
+  for (let i = 0; i < 40; i++) {
+    const k = addDays(end, -i);
+    if (i > 0 && rnd() < 0.08) continue;
+    const dow = keyToDate(k).getDay();
+    const weekend = dow === 5 || dow === 6;
+    let b = -40 + (weekend ? 80 : 0) + (i < 14 ? 35 : 0) + Math.round((rnd() - 0.5) * (i < 14 ? 150 : 70));
+    b = Math.round(b / 5) * 5;
+    let w = b + 390 + Math.round(rnd() * 80) + (weekend ? 70 : 0);
+    w = Math.round(w / 5) * 5;
+    const r = { date: k, bed: clock(b), nextDay: b >= 0, wake: clock(w), reasons: [], memo: '' };
+    if (b > -30 && rnd() < 0.85) {
+      r.reasons.push(pick(['과제·공부', '스마트폰', '스마트폰', '영상·게임', '잠이 안 옴', '과제·공부', '약속·모임', '카페인']));
+      if (rnd() < 0.25) r.reasons.push(pick(['스마트폰', '카페인', '늦은 귀가']));
+      r.reasons = [...new Set(r.reasons)];
+      if (rnd() < 0.2) r.memo = pick(['시험 기간', '팀플 마감', '유튜브 보다가', '커피를 늦게 마심']);
+    }
+    recs.push(r);
+  }
+  const d = normalize({ settings: data.settings, records: recs });
+  d.settings = data.settings;
+  return d;
+}
+function exitDemo() {
+  demo = null;
+  $('demoBanner').hidden = true;
+  renderAnalysis();
+}
+$('demoBtn').addEventListener('click', () => {
+  demo = makeDemo();
+  $('demoBanner').hidden = false;
+  state.end = nightDefault();
+  renderAnalysis();
+});
+$('demoExit').addEventListener('click', exitDemo);
+
+/* ---------- 분석 ---------- */
+const state = { period: 7, end: nightDefault() };
+try {
+  const ui = JSON.parse(localStorage.getItem(UI_KEY) || '{}');
+  if ([7, 15, 30].includes(ui.period)) state.period = ui.period;
+} catch (e) {}
+
+function windowKeys(end, N) { const a = []; for (let i = N - 1; i >= 0; i--) a.push(addDays(end, -i)); return a; }
+
+function analyze(keys, D) {
+  const map = new Map(D.records.map(r => [r.date, r]));
+  const tb = targetBedOff(D.settings);
+  const rows = keys.map((k, i) => {
+    const r = map.get(k);
+    if (!r) return { k, i, r: null };
+    const b = bedOffset(r), w = wakeOffset(r);
+    return { k, i, r, b, w, d: w == null ? null : w - b, late: b > tb };
+  });
+  const has = rows.filter(x => x.r);
+  const withW = has.filter(x => x.w != null);
+  const beds = has.map(x => x.b), wakes = withW.map(x => x.w), durs = withW.map(x => x.d);
+  // 연속된 두 밤 사이의 취침 시각 변화
+  const jumps = [];
+  for (let i = 1; i < rows.length; i++) if (rows[i].r && rows[i - 1].r) jumps.push(Math.abs(rows[i].b - rows[i - 1].b));
+  // 주말 밤(금·토) vs 평일 밤
+  const wkB = [], wdB = [];
+  has.forEach(x => { const dow = keyToDate(x.k).getDay(); (dow === 5 || dow === 6 ? wkB : wdB).push(x.b); });
+  return {
+    keys, rows, has, withW, beds, wakes, durs,
+    mBed: mean(beds), mWake: mean(wakes), mDur: mean(durs),
+    sdBed: sd(beds), sdWake: sd(wakes), sdDur: sd(durs),
+    jump: mean(jumps), wkGap: wkB.length >= 2 && wdB.length >= 2 ? mean(wkB) - mean(wdB) : null,
+    lateCount: has.filter(x => x.late).length,
+    slopeBed: slope(has.map(x => x.i), beds),
+    slopeWake: slope(withW.map(x => x.i), wakes),
+    slopeDur: slope(withW.map(x => x.i), durs),
+    spanBed: has.length ? has[has.length - 1].i - has[0].i : 0,
+    spanWake: withW.length ? withW[withW.length - 1].i - withW[0].i : 0
+  };
+}
+
+function regLevel(score) {
+  if (score <= 30) return { key: 'good', ico: '✓', label: '고른 편이에요', i: 0 };
+  if (score <= 60) return { key: 'warning', ico: '!', label: '조금 들쭉날쭉해요', i: 1 };
+  if (score <= 90) return { key: 'serious', ico: '!', label: '들쭉날쭉해요', i: 2 };
+  return { key: 'critical', ico: '✕', label: '매우 불규칙해요', i: 3 };
+}
+
+let lastCtx = null;
+
+function renderAnalysis() {
+  const D = view();
+  const empty = !D.records.length;
+  $('emptyState').hidden = !empty;
+  $('analysis').hidden = empty;
+  $('toolbar').hidden = empty;
+  document.querySelectorAll('#periodTabs button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.n === state.period ? 'true' : 'false'));
+  if (empty) return;
+
+  const N = state.period;
+  const keys = windowKeys(state.end, N);
+  const A = analyze(keys, D);
+  const P = analyze(windowKeys(addDays(state.end, -N), N), D);
+  $('rangeLabel').textContent = `${md(keys[0])} – ${md(keys[N - 1])}`;
+  $('nextRange').disabled = state.end >= nightDefault();
+  $('latestRange').disabled = state.end === nightDefault();
+
+  lastCtx = { A, D, N };
+  renderTiles(A, P, N);
+  renderReg(A);
+  renderTrend(A, P, N);
+  drawCharts();
+  renderReasons(A);
+  renderTable(A);
+}
+
+function deltaText(cur, prev, words) {
+  if (cur == null || prev == null) return null;
+  const d = Math.round(cur - prev);
+  if (Math.abs(d) < 5) return '이전과 비슷해요';
+  return `이전보다 ${dur(d)} ${d > 0 ? words[0] : words[1]}`;
+}
+function renderTiles(A, P, N) {
+  const box = $('tiles');
+  box.textContent = '';
+  const tile = (k, v, unit, d) => h('div', { class: 'tile' }, h('div', { class: 'k' }, k), h('div', { class: 'v' }, v, unit ? h('small', null, unit) : null), h('div', { class: 'd' }, d || ' '));
+  const durParts = m => { if (m == null) return ['—', null]; m = Math.round(m); return [String(Math.floor(m / 60)), `시간 ${m % 60}분`]; };
+  box.append(
+    tile('평균 잠든 시각', A.mBed == null ? '—' : clock(A.mBed), null, deltaText(A.mBed, P.mBed, ['늦게', '일찍'])),
+    tile('평균 일어난 시각', A.mWake == null ? '—' : clock(A.mWake), null, deltaText(A.mWake, P.mWake, ['늦게', '일찍'])),
+    tile('평균 잔 시간', ...durParts(A.mDur), deltaText(A.mDur, P.mDur, ['길게', '짧게'])),
+    tile('기록한 밤', String(A.has.length), `/${N}일`, A.has.length ? `목표보다 늦게 잔 날 ${A.lateCount}일` : '이 기간엔 기록이 없어요')
+  );
+}
+
+function renderReg(A) {
+  const box = $('regBody');
+  box.textContent = '';
+  if (A.has.length < 3) {
+    box.append(
+      h('div', { class: 'verdict' }, h('span', { class: 'status-ico none', 'aria-hidden': 'true' }, '?'), h('span', { class: 'big' }, '기록이 더 필요해요')),
+      h('p', { class: 'note' }, `이 기간에 기록이 3일 이상 있으면 수면 시각이 얼마나 고른지 계산해요. (지금 ${A.has.length}일)`)
+    );
+    return;
+  }
+  const parts = [A.sdBed, A.withW.length >= 3 ? A.sdWake : null].filter(v => v != null);
+  const score = mean(parts);
+  const lv = regLevel(score);
+  box.append(
+    h('div', { class: 'verdict' },
+      h('span', { class: 'status-ico ' + lv.key, 'aria-hidden': 'true' }, lv.ico),
+      h('span', { class: 'big' }, lv.label)),
+    h('p', { class: 'sub', style: 'margin:6px 0 0' }, `잠들고 일어나는 시각이 평균에서 보통 ±${Math.round(score)}분 정도 벗어났어요.`)
+  );
+  const pos = Math.min(score, 120) / 120 * 100;
+  box.append(h('div', { class: 'meter', role: 'img', 'aria-label': `규칙성 점수 ±${Math.round(score)}분, ${lv.label}` },
+    h('span', { class: 'meter-mark', style: `left:${pos}%` }, `±${Math.round(score)}분`),
+    h('div', { class: 'meter-track' }, ['good', 'warning', 'serious', 'critical'].map((k, i) => h('span', { class: k + (i === lv.i ? ' on' : '') }))),
+    h('div', { class: 'meter-scale' }, ['0', '30분', '60분', '90분', '120분+'].map((t, i) => h('span', { style: `left:${i * 25}%` }, t)))
+  ));
+  const dl = h('dl', { class: 'facts' });
+  const row = (k, v) => dl.append(h('dt', null, k), h('dd', null, v));
+  row('잠든 시각 흔들림', `±${dur(A.sdBed)}`);
+  if (A.sdWake != null && A.withW.length >= 3) row('일어난 시각 흔들림', `±${dur(A.sdWake)}`);
+  if (A.sdDur != null && A.withW.length >= 3) row('잔 시간 흔들림', `±${dur(A.sdDur)}`);
+  if (A.jump != null) row('전날 밤 대비 취침 변화', `평균 ${dur(A.jump)}`);
+  if (A.wkGap != null) {
+    const g = Math.round(A.wkGap);
+    row('주말 밤(금·토) 취침', Math.abs(g) < 15 ? '평일과 비슷' : `평일보다 ${dur(g)} ${g > 0 ? '늦게' : '일찍'}`);
+  }
+  box.append(dl, h('p', { class: 'note' }, '‘흔들림’은 표준편차예요. 30분 안쪽이면 고른 편, 1시간이 넘으면 수면 주기가 들쭉날쭉한 편으로 봐요.'));
+}
+
+function trendRow(label, sl, span, words, prevText) {
+  let ico = '→', t = `${label}: 큰 변화 없이 유지`, sub = '';
+  if (sl != null && span > 0) {
+    const change = Math.round(sl * span);
+    if (Math.abs(change) >= 20) {
+      ico = change > 0 ? '↗' : '↘';
+      t = `${label}: 점점 ${change > 0 ? words[0] : words[1]}지는 중`;
+    }
+    sub = `기간 처음과 끝을 비교하면 ${Math.abs(change) < 5 ? '거의 같아요' : `약 ${dur(change)} ${change > 0 ? words[2] : words[3]}`}`;
+  } else {
+    t = `${label}: 기록이 3일 이상 필요해요`;
+    ico = '·';
+  }
+  return h('div', { class: 'trend-row' },
+    h('span', { class: 'trend-ico', 'aria-hidden': 'true' }, ico),
+    h('div', null, h('div', { class: 't' }, t), h('div', { class: 's' }, [sub, prevText].filter(Boolean).join(' · '))));
+}
+function renderTrend(A, P, N) {
+  const box = $('trendBody');
+  box.textContent = '';
+  const pn = PERIOD_NAME[N];
+  const cmp = (cur, prev, w) => { const t = deltaText(cur, prev, w); return t ? t.replace('이전', `지난 ${pn}`) : null; };
+  const list = h('div', { class: 'trend-list' },
+    trendRow('잠드는 시각', A.slopeBed, A.spanBed, ['늦어', '빨라', '늦어짐', '빨라짐'], cmp(A.mBed, P.mBed, ['늦게', '일찍'])),
+    trendRow('일어나는 시각', A.slopeWake, A.spanWake, ['늦어', '빨라', '늦어짐', '빨라짐'], cmp(A.mWake, P.mWake, ['늦게', '일찍'])),
+    trendRow('잔 시간', A.slopeDur, A.spanWake, ['길어', '짧아', '길어짐', '짧아짐'], cmp(A.mDur, P.mDur, ['길게', '짧게'])));
+  box.append(list);
+  if (A.has.length >= 2) {
+    const latest = A.has.reduce((a, b) => (b.b > a.b ? b : a));
+    const earliest = A.has.reduce((a, b) => (b.b < a.b ? b : a));
+    const dl = h('dl', { class: 'facts' });
+    dl.append(
+      h('dt', null, '가장 늦게 잔 밤'), h('dd', null, `${mdw(latest.k)} ${clock(latest.b)}`),
+      h('dt', null, '가장 일찍 잔 밤'), h('dd', null, `${mdw(earliest.k)} ${clock(earliest.b)}`));
+    if (A.durs.length >= 2) {
+      const sh = A.withW.reduce((a, b) => (b.d < a.d ? b : a));
+      dl.append(h('dt', null, '가장 짧게 잔 밤'), h('dd', null, `${mdw(sh.k)} ${dur(sh.d)}`));
+    }
+    box.append(dl);
+  }
+}
+
+/* ---------- 차트 ---------- */
+function tipFor(el) {
+  let tip = el.querySelector('.tip');
+  if (!tip) { tip = h('div', { class: 'tip', role: 'presentation' }); el.append(tip); }
+  return tip;
+}
+function showTip(el, x, y, nodes) {
+  const tip = tipFor(el);
+  tip.replaceChildren(...nodes);
+  tip.classList.add('show');
+  const W = el.clientWidth, tw = tip.offsetWidth, th = tip.offsetHeight;
+  let left = x + 14;
+  if (left + tw > W) left = x - tw - 14;
+  if (left < 0) left = Math.max(0, Math.min(W - tw, x - tw / 2));
+  const top = Math.max(0, y - th / 2);
+  tip.style.transform = `translate(${left}px, ${top}px)`;
+}
+function hideTip(el) { const t = el.querySelector('.tip'); if (t) t.classList.remove('show'); }
+
+function rowTip(row) {
+  const nodes = [h('div', { class: 'tt' }, `${mdw(row.k)} 밤`)];
+  if (!row.r) { nodes.push(h('div', { class: 'ts' }, '기록 없음')); return nodes; }
+  nodes.push(h('div', { class: 'tv' }, h('i', { class: row.late ? 'late' : 'ontime' }), `${clock(row.b)} → ${row.w == null ? '?' : clock(row.w)}`));
+  nodes.push(h('div', { class: 'ts' }, row.d == null ? '일어난 시각 미기록' : `${dur(row.d)} 잠`, row.r.nextDay ? ' · 자정 이후 잠듦' : ''));
+  if (row.r.reasons.length) nodes.push(h('div', { class: 'ts' }, '이유: ' + row.r.reasons.join(', ')));
+  if (row.r.memo) nodes.push(h('div', { class: 'ts' }, row.r.memo.length > 60 ? row.r.memo.slice(0, 60) + '…' : row.r.memo));
+  return nodes;
+}
+
+function xAxis(svg, keys, m, sw, H) {
+  const N = keys.length, ev = N <= 7 ? 1 : N <= 15 ? 2 : 5;
+  keys.forEach((k, i) => {
+    if ((N - 1 - i) % ev) return;
+    const d = keyToDate(k), x = m.l + sw * (i + 0.5);
+    svg.append(s('text', { x, y: H - m.b + 17, 'text-anchor': 'middle', class: 'ax' }, `${d.getMonth() + 1}/${d.getDate()}`));
+    if (N <= 7) svg.append(s('text', { x, y: H - m.b + 32, 'text-anchor': 'middle', class: 'ax' + (d.getDay() === 5 || d.getDay() === 6 ? ' wk' : '') }, WD[d.getDay()]));
+  });
+}
+
+// 기준선 이름은 막대를 가리지 않도록 차트 오른쪽 바깥에 두 줄로 단다
+const RIGHT = 74;
+function sideLabel(svg, x, y, lines, cls) {
+  const t = s('text', { x, y: y - 3, class: cls });
+  lines.forEach((ln, i) => t.append(s('tspan', { x, dy: i ? 13 : 0 }, ln)));
+  svg.append(t);
+}
+
+function drawSleepChart() {
+  const el = $('chart1');
+  const { A, D, N } = lastCtx;
+  el.textContent = '';
+  if (!A.has.length) { el.append(h('div', { class: 'chart-empty' }, '이 기간엔 기록이 없어요.')); return; }
+  const W = Math.max(280, el.clientWidth), H = 320;
+  const m = { l: 44, r: RIGHT, t: 10, b: N <= 7 ? 40 : 26 };
+  const pw = W - m.l - m.r, ph = H - m.t - m.b, sw = pw / N;
+  const tb = targetBedOff(D.settings), tw = targetWakeOff(D.settings);
+  let lo = Math.min(tb, ...A.beds), hi = Math.max(tw, ...A.wakes, ...A.beds.map(b => b + 60));
+  lo = Math.floor((lo - 30) / 60) * 60;
+  hi = Math.ceil((hi + 30) / 60) * 60;
+  const span = hi - lo, step = span > 18 * 60 ? 240 : span > 9 * 60 ? 120 : 60;
+  const y = v => m.t + (v - lo) / span * ph;
+  const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: 'img', 'aria-label': `${PERIOD_NAME[N]} 동안 밤마다 잠든 시각과 일어난 시각. 자세한 값은 아래 기록 목록에 있어요.` });
+
+  for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) {
+    const yy = Math.round(y(v)) + 0.5;
+    svg.append(s('line', { x1: m.l, x2: W - m.r, y1: yy, y2: yy, class: v % DAY === 0 ? 'grid mid' : 'grid' }));
+    svg.append(s('text', { x: m.l - 8, y: yy + 4, 'text-anchor': 'end', class: 'ax' }, v % DAY === 0 ? '자정' : clock(v)));
+  }
+  const wash = s('rect', { class: 'hover-wash', x: 0, y: m.t, width: sw, height: ph, visibility: 'hidden' });
+  svg.append(wash);
+  [[tb, '목표 취침'], [tw, '목표 기상']].forEach(([v, lab]) => {
+    if (v < lo || v > hi) return;
+    const yy = Math.round(y(v)) + 0.5;
+    svg.append(s('line', { x1: m.l, x2: W - m.r, y1: yy, y2: yy, class: 'target' }));
+    sideLabel(svg, W - m.r + 6, yy, [lab, clock(v)], 'target-lab');
+  });
+
+  const bw = Math.max(3, Math.min(24, sw * 0.6));
+  A.rows.forEach(row => {
+    if (!row.r) return;
+    const cx = m.l + sw * (row.i + 0.5), cls = row.late ? 'late' : 'ontime';
+    if (row.w != null) {
+      const y1 = y(row.b), y2 = y(row.w);
+      svg.append(s('rect', { x: cx - bw / 2, y: y1, width: bw, height: Math.max(2, y2 - y1), rx: Math.min(4, bw / 2), class: 'bar ' + cls }));
+    } else {
+      svg.append(s('circle', { cx, cy: y(row.b), r: 4.5, class: 'open-dot ' + cls }));
+    }
+  });
+  A.rows.forEach(row => {
+    const x0 = m.l + sw * row.i;
+    const hit = s('rect', { x: x0, y: m.t, width: sw, height: ph, class: 'hit' });
+    const on = () => {
+      wash.setAttribute('x', x0); wash.setAttribute('visibility', 'visible');
+      const cy = row.r ? (y(row.b) + (row.w != null ? y(row.w) : y(row.b))) / 2 : m.t + ph / 2;
+      showTip(el, x0 + sw / 2, cy, rowTip(row));
+    };
+    hit.addEventListener('pointerenter', on);
+    hit.addEventListener('pointerdown', on);
+    hit.addEventListener('pointerleave', () => { wash.setAttribute('visibility', 'hidden'); hideTip(el); });
+    svg.append(hit);
+  });
+  xAxis(svg, A.keys, m, sw, H);
+  el.append(svg);
+}
+
+function drawDurChart() {
+  const el = $('chart2');
+  const { A, N } = lastCtx;
+  el.textContent = '';
+  if (!A.durs.length) { el.append(h('div', { class: 'chart-empty' }, '일어난 시각까지 적은 기록이 아직 없어요.')); return; }
+  const W = Math.max(280, el.clientWidth), H = 230;
+  const m = { l: 44, r: RIGHT, t: 10, b: N <= 7 ? 40 : 26 };
+  const pw = W - m.l - m.r, ph = H - m.t - m.b, sw = pw / N;
+  let lo = Math.min(300, ...A.durs.map(d => d - 60)), hi = Math.max(600, ...A.durs.map(d => d + 60));
+  lo = Math.max(0, Math.floor(lo / 60) * 60);
+  hi = Math.ceil(hi / 60) * 60;
+  const step = hi - lo > 10 * 60 ? 120 : 60;
+  const y = v => m.t + (hi - v) / (hi - lo) * ph;
+  const cx = i => m.l + sw * (i + 0.5);
+  const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: 'img', 'aria-label': `${PERIOD_NAME[N]} 동안 하루 수면 시간. 평균 ${dur(A.mDur)}.` });
+
+  svg.append(s('rect', { x: m.l, y: y(540), width: pw, height: y(420) - y(540), class: 'band' }));
+  for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) {
+    const yy = Math.round(y(v)) + 0.5;
+    svg.append(s('line', { x1: m.l, x2: W - m.r, y1: yy, y2: yy, class: 'grid' }));
+    svg.append(s('text', { x: m.l - 8, y: yy + 4, 'text-anchor': 'end', class: 'ax' }, `${v / 60}시간`));
+  }
+  const ay = Math.round(y(A.mDur)) + 0.5;
+  svg.append(s('line', { x1: m.l, x2: W - m.r, y1: ay, y2: ay, class: 'avg' }));
+  sideLabel(svg, W - m.r + 6, ay, ['평균', dur(A.mDur)], 'avg-lab');
+
+  let d = '', prev = false;
+  A.rows.forEach(row => {
+    if (row.d == null) { prev = false; return; }
+    d += (prev ? 'L' : 'M') + cx(row.i).toFixed(1) + ' ' + y(row.d).toFixed(1);
+    prev = true;
+  });
+  svg.append(s('path', { d, class: 'line' }));
+  A.rows.forEach(row => { if (row.d != null) svg.append(s('circle', { cx: cx(row.i), cy: y(row.d), r: 4, class: 'ldot' })); });
+
+  const xh = s('line', { x1: 0, x2: 0, y1: m.t, y2: m.t + ph, class: 'xhair', visibility: 'hidden' });
+  svg.append(xh);
+  const overlay = s('rect', { x: m.l, y: m.t, width: pw, height: ph, class: 'hit' });
+  const move = e => {
+    const r = svg.getBoundingClientRect();
+    const i = Math.max(0, Math.min(N - 1, Math.floor((e.clientX - r.left - m.l) / sw)));
+    const row = A.rows[i], x = Math.round(cx(i)) + 0.5;
+    xh.setAttribute('x1', x); xh.setAttribute('x2', x); xh.setAttribute('visibility', 'visible');
+    const nodes = [h('div', { class: 'tt' }, `${mdw(row.k)} 밤`)];
+    if (row.d != null) {
+      nodes.push(h('div', { class: 'tv' }, h('i', { class: 'ontime' }), dur(row.d)));
+      nodes.push(h('div', { class: 'ts' }, `${clock(row.b)} → ${clock(row.w)}`));
+    } else nodes.push(h('div', { class: 'ts' }, row.r ? '일어난 시각 미기록' : '기록 없음'));
+    showTip(el, x, row.d != null ? y(row.d) : m.t + ph / 2, nodes);
+  };
+  overlay.addEventListener('pointermove', move);
+  overlay.addEventListener('pointerdown', move);
+  overlay.addEventListener('pointerleave', () => { xh.setAttribute('visibility', 'hidden'); hideTip(el); });
+  svg.append(overlay);
+  svg.append(s('text', { x: m.l + 6, y: y(540) + 14, class: 'band-lab' }, '권장 7–9시간'));
+  xAxis(svg, A.keys, m, sw, H);
+  el.append(svg);
+}
+
+function drawCharts() { if (lastCtx) { drawSleepChart(); drawDurChart(); } }
+
+function renderReasons(A) {
+  const box = $('reasons');
+  box.textContent = '';
+  const counts = new Map();
+  A.has.forEach(x => x.r.reasons.forEach(t => counts.set(t, (counts.get(t) || 0) + 1)));
+  const lateWithReason = A.has.filter(x => x.late && x.r.reasons.length).length;
+  $('reasonSummary').textContent = A.lateCount
+    ? `목표보다 늦게 잔 ${A.lateCount}일 중 ${lateWithReason}일에 이유를 적었어요.`
+    : '이 기간엔 목표보다 늦게 잔 날이 없어요.';
+  if (!counts.size) { box.append(h('p', { class: 'muted', style: 'margin:0;font-size:13.5px' }, '이 기간에 적은 이유가 없어요.')); return; }
+  const list = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  const max = list[0][1];
+  list.forEach(([name, c]) => box.append(h('div', { class: 'rrow' },
+    h('span', { class: 'rlab', title: name }, name),
+    h('div', { class: 'rtrack' }, h('div', { class: 'rbar', style: `width:${c / max * 100}%` })),
+    h('span', { class: 'rval' }, `${c}일`))));
+}
+
+function renderTable(A) {
+  const t = $('table');
+  t.textContent = '';
+  t.append(h('thead', null, h('tr', null,
+    h('th', null, '날짜 (밤)'), h('th', null, '잠든 시각'), h('th', null, '일어난 시각'), h('th', null, '잔 시간'), h('th', null, '늦어진 이유 · 메모'), h('th', null, h('span', { class: 'sr' }, '관리')))));
+  const tb = h('tbody');
+  [...A.rows].reverse().forEach(row => {
+    if (!row.r) {
+      tb.append(h('tr', { class: 'missing' }, h('td', { class: 'date' }, mdw(row.k)), h('td', { colspan: 5 }, '기록 없음')));
+      return;
+    }
+    const r = row.r;
+    tb.append(h('tr', null,
+      h('td', { class: 'date' }, mdw(row.k)),
+      h('td', { class: 'num' }, r.bed, r.nextDay ? h('span', { class: 'tag' }, '자정 이후') : null,
+        row.late ? h('span', { class: 'late-mark', title: '목표보다 늦게 잠' }, h('span', { class: 'sr' }, '목표보다 늦게 잠')) : null),
+      h('td', { class: 'num' }, r.wake || '—'),
+      h('td', { class: 'num' }, row.d == null ? '—' : dur(row.d)),
+      h('td', null, r.reasons.length ? r.reasons.join(', ') : (row.late ? h('span', { class: 'muted' }, '이유 없음') : ''),
+        r.memo ? h('div', { class: 'memo' }, r.memo) : null),
+      h('td', { class: 'act' }, demo ? null : [
+        h('button', { type: 'button', class: 'btn small', onclick: () => { loadDate(r.date); flash(''); fBed.focus(); $('entryForm').scrollIntoView({ behavior: 'smooth', block: 'start' }); } }, '수정'),
+        ' ',
+        h('button', { type: 'button', class: 'btn small danger', onclick: () => {
+          if (!confirm(`${mdw(r.date)} 밤 기록을 지울까요?`)) return;
+          removeRec(r.date);
+          if (fDate.value === r.date) loadDate(r.date);
+          renderChips(); renderAnalysis();
+        } }, '삭제')
+      ])));
+  });
+  t.append(tb);
+}
+
+/* ---------- 기간 이동 ---------- */
+document.querySelectorAll('#periodTabs button').forEach(b => b.addEventListener('click', () => {
+  state.period = +b.dataset.n;
+  try { localStorage.setItem(UI_KEY, JSON.stringify({ period: state.period })); } catch (e) {}
+  renderAnalysis();
+}));
+$('prevRange').addEventListener('click', () => { state.end = addDays(state.end, -state.period); renderAnalysis(); });
+$('nextRange').addEventListener('click', () => {
+  const n = addDays(state.end, state.period), max = nightDefault();
+  state.end = n > max ? max : n;
+  renderAnalysis();
+});
+$('latestRange').addEventListener('click', () => { state.end = nightDefault(); renderAnalysis(); });
+
+let rTimer = null, lastW = 0;
+new ResizeObserver(() => {
+  const w = $('chart1').clientWidth;
+  if (w === lastW) return;
+  lastW = w;
+  cancelAnimationFrame(rTimer);
+  rTimer = requestAnimationFrame(drawCharts);
+}).observe($('analysis'));
+
+// 다른 탭에서 기록이 바뀌면 따라간다
+window.addEventListener('storage', e => {
+  if (e.key !== LS_KEY || !e.newValue) return;
+  try { data = normalize(JSON.parse(e.newValue)); } catch (err) { return; }
+  renderChips(); renderAnalysis(); renderSaveState();
+});
+
+/* ---------- 시작 ---------- */
+fDate.max = dateKey(new Date());
+loadDate(nightDefault());
+renderSaveState();
+renderAnalysis();
+})();
+</script>
+</body>
+</html>
